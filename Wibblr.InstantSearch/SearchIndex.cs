@@ -22,7 +22,7 @@ namespace Wibblr.InstantSearch
     {
         int[] compressedTrigramCounts = new int[36 * 36 * 36];
 
-        Dictionary<ushort, HashSet<int>> trigramDict = new Dictionary<ushort, HashSet<int>>();
+        HashSet<int>[] trigramArr = new HashSet<int>[36 * 36 * 36];
         Dictionary<int, string> originalValues = new Dictionary<int, string>();
 
         public void Add(int id, string value)
@@ -36,68 +36,37 @@ namespace Wibblr.InstantSearch
             foreach (var word in words)
             {
                 var normalizedWord = Utils.NormalizeString(word);
-
-                //var trigrams = Utils.GenerateSubstrings(normalizedWord, 3);
                 Utils.AddCompressedTrigrams(normalizedWord, compressedTrigrams);
             }
 
             foreach (var compressedTrigram in compressedTrigrams)
             {
-                //var compressedTrigram = Utils.CompressTrigram(trigram);
+                if (trigramArr[compressedTrigram] == null)
+                    trigramArr[compressedTrigram] = new HashSet<int>();
 
-                if (!trigramDict.ContainsKey(compressedTrigram))
-                    trigramDict[compressedTrigram] = new HashSet<int>();
-
-                trigramDict[compressedTrigram].Add(id);
+                trigramArr[compressedTrigram].Add(id);
                 compressedTrigramCounts[compressedTrigram] = compressedTrigramCounts[compressedTrigram] + 1;
-                //Console.WriteLine($"added id {id} for trigram {trigram.ToString()} ({compressedTrigram.ToString()})");
+                
             }
 
             foreach(var ct in compressedTrigrams)
             {
-                compressedTrigramCounts[ct] = trigramDict[ct].Count;
+                compressedTrigramCounts[ct] = trigramArr[ct].Count;
             }
         }
 
         public SearchResult Search(string searchTerm)
         {
-            var start = DateTime.UtcNow;
-            var splits = new List<TimeSpan>();
-
+            var startTime = DateTime.UtcNow;
             var words = searchTerm.Split(new char[] { }, StringSplitOptions.RemoveEmptyEntries);
-
-           
-            //var trigrams = new HashSet<Slice>();
             var compressedTrigrams = new HashSet<ushort>();
-            var timeSplit1 = DateTime.UtcNow;
-            var timeSplit2 = DateTime.UtcNow; 
-            
+
             foreach (var word in words)
             {
                 var normalizedWord = Utils.NormalizeString(word);
-                //var normalizedWord = Encoding.ASCII.GetBytes(word);
-                timeSplit2 = DateTime.UtcNow;
                 Utils.AddCompressedTrigrams(normalizedWord, compressedTrigrams);
             }
 
-            //var compressedTrigrams = trigrams
-            //   .Select(x => Utils.CompressTrigram(x))
-            //    .ToArray();
-
-            var timeSplit3 = DateTime.UtcNow;
-
-
-            // Get 3 most selective trigrams, i.e. those with the fewest number of matches
-
-            // This takes over 3 milliseconds, so rewrite below.
-            //var searchTrigrams = compressedTrigrams
-            //    .Where(ct => trigramDict.ContainsKey(ct))
-            //    .Select(ct => new { ct, count = trigramDict[ct].Count })
-            //    .OrderBy(x => x.count)
-            //    .Select(x => x.ct)
-            //    .ToArray();
-
-            // This replicates the above statement, but is faster.
             var searchTrigrams = new List<ushort>();
 
             foreach (var ct in compressedTrigrams)
@@ -128,49 +97,44 @@ namespace Wibblr.InstantSearch
                 }
             }
 
-            var timeSplit4 = DateTime.UtcNow;
-
-
             // now find all IDs that contain the 3 trigrams with the fewest matches (i.e. the most selective)
             HashSet<int> ids = new HashSet<int>();
             var searchResultItems = new List<SearchResultItem>();
 
-            var timeSplit5 = DateTime.UtcNow;
-            var timeSplit6 = DateTime.UtcNow;
-            var timeSplit7 = DateTime.UtcNow;
 
             if (searchTrigrams.Count >= 1)
             {
-                ids = trigramDict[searchTrigrams[0]];
-                timeSplit5 = DateTime.UtcNow;
-                timeSplit6 = DateTime.UtcNow;
-                timeSplit7 = DateTime.UtcNow;
+                ids = trigramArr[searchTrigrams[0]];
+
                 if (searchTrigrams.Count >= 2)
                 {
-                    ids.IntersectWith(trigramDict[searchTrigrams[1]]);
-                    timeSplit6 = DateTime.UtcNow;
-                    timeSplit7 = DateTime.UtcNow;
+                    ids.IntersectWith(trigramArr[searchTrigrams[1]]);
 
                     if (searchTrigrams.Count >= 3)
                     {
-                        ids.IntersectWith(trigramDict[searchTrigrams[2]]);
-
-                        timeSplit7 = DateTime.UtcNow;
+                        ids.IntersectWith(trigramArr[searchTrigrams[2]]);
                     }
                 }
             }
-
 
             //searchResultItems.AddRange(ids.Select(x => new SearchResultItem { Id = x, OriginalValue = originalValues[x] }));
             foreach (var id in ids)
             {
                 // test whether this is a valid result (e.g. The search term 'aaaaaa' will otherwise return a match for the value 'aaa')
-                if (originalValues[id].Contains(searchTerm))
+                // each search word must be in the original value.
+                var isValid = true;
+                foreach (var word in words)
+                {
+                    if (!originalValues[id].Contains(word))
+                    {
+                        isValid = false;
+                        break;
+                    }
+                }
+
+                if (isValid)
                     searchResultItems.Add(new SearchResultItem { Id = id, OriginalValue = originalValues[id] });
             }
-
-
-            var timeSplit8 = DateTime.UtcNow;
 
             // Now rank the results in order of how many of the search term trigrams are contained in the result,
             // allowing 'did you mean' type results when there are no full matches.
@@ -179,45 +143,26 @@ namespace Wibblr.InstantSearch
                 var count = 0;
                 foreach(var ct in compressedTrigrams)
                 {
-                    if (!trigramDict.ContainsKey(ct))
+                    if (trigramArr[ct] == null)
                         continue;
 
-                    if (trigramDict[ct].Contains(searchResultItem.Id))
+                    if (trigramArr[ct].Contains(searchResultItem.Id))
                         count++;
                 }
                 searchResultItem.Score = (int)((float)count * 100 / compressedTrigrams.Count);
             }
 
-
-            var timeSplit9 = DateTime.UtcNow;
-
             searchResultItems.Sort((a, b) => -a.Score.CompareTo(b.Score));
-
-            var timeSplit10 = DateTime.UtcNow;
 
             for (int i = 0; i < searchResultItems.Count; i++)
             {
                 searchResultItems[i].Order = i;
             }
-            var timeSplit11 = DateTime.UtcNow;
 
             var searchResult = new SearchResult 
             { 
-                Splits = new TimeSpan[] {
-                    timeSplit1.Subtract(start),
-                    timeSplit2.Subtract(timeSplit1),
-                    timeSplit3.Subtract(timeSplit2),
-                    timeSplit4.Subtract(timeSplit3),
-                    timeSplit5.Subtract(timeSplit4),
-                    timeSplit6.Subtract(timeSplit5),
-                    timeSplit7.Subtract(timeSplit6),
-                    timeSplit8.Subtract(timeSplit7),
-                    timeSplit9.Subtract(timeSplit8),
-                    timeSplit10.Subtract(timeSplit9),
-                    timeSplit11.Subtract(timeSplit10),
-                },
                 SearchResultItems = searchResultItems, 
-                TotalSearchTime = DateTime.UtcNow.Subtract(start) 
+                TotalSearchTime = DateTime.UtcNow.Subtract(startTime) 
             };
 
             return searchResult;
