@@ -29,9 +29,10 @@ namespace Wibblr.InstantSearch.Examples
         }
 
         void Run()
-        { 
-            Console.WriteLine("Adding 1 million strings");
-            for (int i = 0; i < 1000000; i++)
+        {
+            int numStrings = 5_000_000;
+            Console.WriteLine($"Adding {numStrings} strings");
+            for (int i = 0; i < numStrings; i++)
             {
                 index.Add(i, RandomString(15));
             }

@@ -22,7 +22,7 @@ namespace Wibblr.InstantSearch
     {
         int[] compressedTrigramCounts = new int[36 * 36 * 36];
 
-        HashSet<int>[] trigramArr = new HashSet<int>[36 * 36 * 36];
+        ISet<int>[] trigramArr = new LowMemorySet[36 * 36 * 36];
         Dictionary<int, string> originalValues = new Dictionary<int, string>();
 
         public void Add(int id, string value)
@@ -42,11 +42,10 @@ namespace Wibblr.InstantSearch
             foreach (var compressedTrigram in compressedTrigrams)
             {
                 if (trigramArr[compressedTrigram] == null)
-                    trigramArr[compressedTrigram] = new HashSet<int>();
+                    trigramArr[compressedTrigram] = new LowMemorySet();
 
                 trigramArr[compressedTrigram].Add(id);
                 compressedTrigramCounts[compressedTrigram] = compressedTrigramCounts[compressedTrigram] + 1;
-                
             }
 
             foreach(var ct in compressedTrigrams)
@@ -67,32 +66,36 @@ namespace Wibblr.InstantSearch
                 Utils.AddCompressedTrigrams(normalizedWord, compressedTrigrams);
             }
 
-            var searchTrigrams = new List<ushort>();
+            var searchTrigrams0 = ushort.MaxValue;
+            var searchTrigrams1 = ushort.MaxValue;
+            var searchTrigrams2 = ushort.MaxValue;
 
             foreach (var ct in compressedTrigrams)
             {
-                int trigramCount = compressedTrigramCounts[ct];
-
-                if (trigramCount > 0)
+                if (searchTrigrams0 == ushort.MaxValue)
+                    searchTrigrams0 = ct;
+                else if (searchTrigrams1 == ushort.MaxValue)
+                    searchTrigrams1 = ct;
+                else if (searchTrigrams2 == ushort.MaxValue)
+                    searchTrigrams2 = ct;
+                else
                 {
-                    if (searchTrigrams.Count < 3)
+                    int trigramCount = compressedTrigramCounts[ct];
+
+                    if (searchTrigrams0 < compressedTrigramCounts[searchTrigrams0])
                     {
-                        searchTrigrams.Add(ct);
+                        searchTrigrams2 = searchTrigrams1;
+                        searchTrigrams1 = searchTrigrams0;
+                        searchTrigrams0 = ct;
                     }
-                    else if (trigramCount < compressedTrigramCounts[searchTrigrams[0]])
+                    else if (trigramCount < compressedTrigramCounts[searchTrigrams1])
                     {
-                        searchTrigrams[2] = searchTrigrams[1];
-                        searchTrigrams[1] = searchTrigrams[0];
-                        searchTrigrams[0] = ct;
+                        searchTrigrams2 = searchTrigrams1;
+                        searchTrigrams1 = ct;
                     }
-                    else if (trigramCount < compressedTrigramCounts[searchTrigrams[1]])
+                    else if (trigramCount < compressedTrigramCounts[searchTrigrams2])
                     {
-                        searchTrigrams[2] = searchTrigrams[1];
-                        searchTrigrams[1] = ct;
-                    }
-                    else if (trigramCount< compressedTrigramCounts[searchTrigrams[2]])
-                    {
-                        searchTrigrams[2] = ct;
+                        searchTrigrams2 = ct;
                     }
                 }
             }
@@ -101,18 +104,17 @@ namespace Wibblr.InstantSearch
             HashSet<int> ids = new HashSet<int>();
             var searchResultItems = new List<SearchResultItem>();
 
-
-            if (searchTrigrams.Count >= 1)
+            if (searchTrigrams0 != ushort.MaxValue)
             {
-                ids = trigramArr[searchTrigrams[0]];
+                ids = new HashSet<int>(trigramArr[searchTrigrams0]);
 
-                if (searchTrigrams.Count >= 2)
+                if (searchTrigrams1 != ushort.MaxValue)
                 {
-                    ids.IntersectWith(trigramArr[searchTrigrams[1]]);
+                    ids.IntersectWith(trigramArr[searchTrigrams1]);
 
-                    if (searchTrigrams.Count >= 3)
+                    if (searchTrigrams2 != ushort.MaxValue)
                     {
-                        ids.IntersectWith(trigramArr[searchTrigrams[2]]);
+                        ids.IntersectWith(trigramArr[searchTrigrams2]);
                     }
                 }
             }
@@ -166,25 +168,6 @@ namespace Wibblr.InstantSearch
             };
 
             return searchResult;
-        }
-    }
-
-    public struct Slice
-    {
-        public byte[] ascii;
-        public short start;
-        public short len;
-
-        public Slice(byte[] ascii, short start, short len) : this()
-        {
-            this.ascii = ascii;
-            this.start = start;
-            this.len = len;
-        }
-
-        public override string ToString()
-        {
-            return Encoding.ASCII.GetString(ascii, start, len);
         }
     }
 }
