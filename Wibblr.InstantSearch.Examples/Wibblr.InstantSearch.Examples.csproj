@@ -3,7 +3,18 @@
   <PropertyGroup>
     <OutputType>Exe</OutputType>
     <TargetFramework>net6.0</TargetFramework>
+    <StartupObject>Wibblr.InstantSearch.Examples.AllsWellThatEndsWell</StartupObject>
   </PropertyGroup>
+
+  <ItemGroup>
+    <None Remove="AllsWellThatEndsWell.txt" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <EmbeddedResource Include="AllsWellThatEndsWell.txt">
+      <CopyToOutputDirectory>Never</CopyToOutputDirectory>
+    </EmbeddedResource>
+  </ItemGroup>
 
   <ItemGroup>
     <ProjectReference Include="..\Wibblr.InstantSearch\Wibblr.InstantSearch.csproj" />

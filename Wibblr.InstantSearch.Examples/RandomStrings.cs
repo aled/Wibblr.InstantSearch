@@ -1,10 +1,10 @@
-﻿using System;
+﻿using System; 
 using System.Linq;
 using System.Text;
 
 namespace Wibblr.InstantSearch.Examples
 {
-    class Program
+    class RandomStrings
     {
         SearchIndex index = new SearchIndex();
 
@@ -25,12 +25,12 @@ namespace Wibblr.InstantSearch.Examples
 
         static void Main(string[] args)
         {
-            new Program().Run();
+            new RandomStrings().Run();
         }
 
         void Run()
         {
-            int numStrings = 5_000_000;
+            int numStrings = 500_000;
             Console.WriteLine($"Adding {numStrings} strings");
             for (int i = 0; i < numStrings; i++)
             {
@@ -53,8 +53,9 @@ namespace Wibblr.InstantSearch.Examples
 
                 var result = index.Search(searchTerm);
 
-                Console.WriteLine("search: " + searchTerm + "; " + result.SearchResultItems.Count + " results in " + result.TotalSearchTime.TotalMilliseconds.ToString() + "ms");
-                Console.WriteLine(string.Join("\n", result.SearchResultItems.Select(x => x.ToString())));
+                Console.WriteLine("search: " + searchTerm + "; " + result.SearchResultExactMatchItems.Count + " exact results " + result.SearchResultAlternativeMatchItems.Count + " non-exact results in " + result.TotalSearchTime.TotalMilliseconds.ToString() + "ms");
+                Console.WriteLine(string.Join(",", result.SearchResultExactMatchItems.Select(x => x.ToString())));
+                Console.WriteLine(string.Join(",", result.SearchResultAlternativeMatchItems.Select(x => x.ToString())));
             }
         }
     }
