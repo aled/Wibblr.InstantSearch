@@ -33,6 +33,18 @@ namespace Wibblr.InstantSearch
             if (uniqueUnsortedItems.Count == 0)
                 return;
 
+            // on the first optimize, can just switch variables.
+            if (uniqueSortedItems.Count == 0)
+            {
+                var temp = uniqueUnsortedItems;
+                uniqueUnsortedItems = uniqueSortedItems;
+                uniqueSortedItems = temp;
+                uniqueSortedItems.Sort();
+                return;
+            }
+
+            Console.WriteLine("Optimising LowMemorySet");
+
             uniqueSortedItems.EnsureCapacity(uniqueSortedItems.Count + uniqueUnsortedItems.Count + _maxUnsortedItems);
             uniqueSortedItems.AddRange(uniqueUnsortedItems);
             uniqueSortedItems.Sort();

@@ -5,7 +5,6 @@ using System.Text;
 
 namespace Wibblr.InstantSearch
 {
-
     /// <summary>
     /// Search engine that gives instant results.
     /// Intended to be used for search-as-you-type queries.
@@ -72,7 +71,13 @@ namespace Wibblr.InstantSearch
 
             foreach (var ct in compressedTrigrams)
             {
-                if (searchTrigrams0 == ushort.MaxValue)
+                int trigramCount = compressedTrigramCounts[ct];
+
+                // if this trigram was not found in the index, ignore it.
+                if (trigramCount == 0)
+                    continue;
+
+                else if (searchTrigrams0 == ushort.MaxValue)
                     searchTrigrams0 = ct;
                 else if (searchTrigrams1 == ushort.MaxValue)
                     searchTrigrams1 = ct;
@@ -80,9 +85,7 @@ namespace Wibblr.InstantSearch
                     searchTrigrams2 = ct;
                 else
                 {
-                    int trigramCount = compressedTrigramCounts[ct];
-
-                    if (searchTrigrams0 < compressedTrigramCounts[searchTrigrams0])
+                    if (trigramCount < compressedTrigramCounts[searchTrigrams0])
                     {
                         searchTrigrams2 = searchTrigrams1;
                         searchTrigrams1 = searchTrigrams0;
