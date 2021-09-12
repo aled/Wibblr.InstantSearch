@@ -7,13 +7,14 @@ namespace Wibblr.InstantSearch.Examples
     class RandomStrings
     {
         SearchIndex index = new SearchIndex();
+        Random random = new Random();
 
         private string RandomString(int len)
         {
             var sb = new StringBuilder();
             for (int i = 0; i < len; i++)
             {
-                int r = Random.Shared.Next() % 36;
+                int r = random.Next() % 36;
 
                 if (r < 10) 
                     sb.Append((char)('0' + r));

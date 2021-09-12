@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Linq;
 using System.Text;
 
 using BenchmarkDotNet.Attributes;
@@ -8,17 +7,20 @@ using BenchmarkDotNet.Running;
 
 namespace Wibblr.InstantSearch.Benchmarks
 {
+    [SimpleJob(RuntimeMoniker.Net472, launchCount: 1, warmupCount: 1, targetCount: 1)]
+    [SimpleJob(RuntimeMoniker.Net50, launchCount: 1, warmupCount: 1, targetCount: 1)]
     [SimpleJob(RuntimeMoniker.Net60, launchCount: 1, warmupCount: 1, targetCount: 1)]
     public class SearchBenchmark
     {
         private readonly SearchIndex searchIndex = new SearchIndex();
+        private readonly Random random = new Random();
 
         private string RandomString(int len)
         {
             StringBuilder sb = new StringBuilder();
             for (int i = 0; i < len; i++)
             {
-                int r = Random.Shared.Next() % 36;
+                int r = random.Next() % 36;
 
                 if (r < 10) sb.Append((char)('0' + r));
                 else sb.Append((char)('a' + r - 10));

@@ -87,7 +87,9 @@ namespace Wibblr.InstantSearch
                 var include = true;
                 foreach (var word in words)
                 {
-                    if (!value.Contains(word, StringComparison.OrdinalIgnoreCase))
+                    // TODO: implement Contains(string, StringComparison.IgnoreCase)
+                    //       which doesn't exist in .net standard 2.0
+                    if (!value.Contains(word.ToLower()))
                     {
                         include = false;
                         break;
@@ -217,7 +219,8 @@ namespace Wibblr.InstantSearch
                 if (isExactMatch)
                     foreach (var word in words)
                     {
-                        if (!originalValues[id].Contains(word, StringComparison.OrdinalIgnoreCase))
+                        // TODO: implement .Contains(string, StringComparison.OrdinalIgnoreCase))
+                        if (!originalValues[id].Contains(word.ToLower()))
                         {
                             isExactMatch = false;
                             break;

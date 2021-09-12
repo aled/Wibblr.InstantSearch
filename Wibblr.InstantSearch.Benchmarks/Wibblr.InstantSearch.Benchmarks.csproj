@@ -1,8 +1,7 @@
-<Project Sdk="Microsoft.NET.Sdk">
+﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <TargetFramework>net6.0</TargetFramework>
-    <Nullable>enable</Nullable>
+    <TargetFrameworks>net5.0;net6.0;net472</TargetFrameworks>
     <OutputType>Exe</OutputType>
     <StartupObject>Wibblr.InstantSearch.Benchmarks.Program</StartupObject>
   </PropertyGroup>

@@ -1,8 +1,10 @@
-﻿using System.Collections;
+﻿using System;
+using System.Collections;
+using System.Collections.Generic;
 
 namespace Wibblr.InstantSearch
 {
-    class LowMemorySet : ISet<int>
+    public class LowMemorySet : ISet<int>
     {
         private int _maxUnsortedItems = 1024;
 
@@ -44,8 +46,13 @@ namespace Wibblr.InstantSearch
             }
 
             Console.WriteLine("Optimising LowMemorySet");
-
-            uniqueSortedItems.EnsureCapacity(uniqueSortedItems.Count + uniqueUnsortedItems.Count + _maxUnsortedItems);
+            
+            // using this in.net standard 2.0
+            uniqueSortedItems.Capacity = uniqueSortedItems.Count + uniqueUnsortedItems.Count + _maxUnsortedItems;
+            
+            // Use this in .net 6.0
+            // uniqueSortedItems.EnsureCapacity(uniqueSortedItems.Count + uniqueUnsortedItems.Count + _maxUnsortedItems);
+            
             uniqueSortedItems.AddRange(uniqueUnsortedItems);
             uniqueSortedItems.Sort();
             uniqueUnsortedItems.Clear();

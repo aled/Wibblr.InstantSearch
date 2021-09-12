@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Reflection;
 using System.Text;
@@ -8,7 +9,6 @@ using System.Threading.Tasks;
 namespace Wibblr.InstantSearch.Examples
 {
     class AllsWellThatEndsWell
-
     {
         static void Main(string[] args)
         {

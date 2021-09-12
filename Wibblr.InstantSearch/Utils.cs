@@ -4,6 +4,13 @@ using System.Text;
 
 namespace Wibblr.InstantSearch
 {
+    public struct Trigram
+    {
+        public ushort value;
+
+        
+    }
+
     public static class Utils
     {
         public static ushort CompressTrigram(byte[] ascii, int start)
