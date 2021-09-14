@@ -12,7 +12,7 @@ namespace Wibblr.InstantSearch.Examples
     {
         static void Main(string[] args)
         {
-            var searchIndex = new SearchIndex();
+            var searchIndex = new SearchIndexTrigramSet();
 
             var a = Assembly.GetExecutingAssembly();
             var textName = a.GetManifestResourceNames().Single(x => x.EndsWith("AllsWellThatEndsWell.txt"));

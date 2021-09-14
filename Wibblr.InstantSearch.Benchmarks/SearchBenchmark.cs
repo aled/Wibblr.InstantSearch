@@ -12,7 +12,7 @@ namespace Wibblr.InstantSearch.Benchmarks
     [SimpleJob(RuntimeMoniker.Net60, launchCount: 1, warmupCount: 1, targetCount: 1)]
     public class SearchBenchmark
     {
-        private readonly SearchIndex searchIndex = new SearchIndex();
+        private readonly SearchIndexTrigramSet searchIndex = new SearchIndexTrigramSet();
         private readonly Random random = new Random();
 
         private string RandomString(int len)

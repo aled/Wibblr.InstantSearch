@@ -4,12 +4,6 @@ using System.Text;
 
 namespace Wibblr.InstantSearch
 {
-    public struct Trigram
-    {
-        public ushort value;
-
-        
-    }
 
     public static class Utils
     {
@@ -22,12 +16,7 @@ namespace Wibblr.InstantSearch
 
                 var b = ascii[start + i];
 
-                if (b >= (byte)'0' && b <= (byte)'9')
-                    sum += b - '0';
-                else if (b >= (byte)'a' && b <= (byte)'z')
-                    sum += b - 'a' + 10;
-                else
-                    throw new Exception("Invalid char in base-36 string");
+                
             }
 
             return (ushort)sum;
@@ -62,13 +51,14 @@ namespace Wibblr.InstantSearch
                 return b.ToArray();
         }
 
-        public static void AddCompressedTrigrams(byte[] ascii, HashSet<ushort> x)
+        public static void AddTrigrams(byte[] ascii, HashSet<Trigram> x)
         {
             DateTime startTime = DateTime.UtcNow;
             int start = 0;
             while (start + 3 <= ascii.Length)
             {
-                ushort ct = CompressTrigram(ascii, start);
+                //ushort ct = CompressTrigram(ascii, start);
+                var ct = new Trigram(ascii[start], ascii[start + 1], ascii[start + 2]);
                 x.Add(ct);
                 start++;
             }

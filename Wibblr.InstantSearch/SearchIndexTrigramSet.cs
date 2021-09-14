@@ -5,6 +5,8 @@ using System.Text;
 
 namespace Wibblr.InstantSearch
 {
+
+
     /// <summary>
     /// Search engine that gives instant results.
     /// Intended to be used for search-as-you-type queries.
@@ -17,139 +19,98 @@ namespace Wibblr.InstantSearch
     /// 
     /// Searches greater than 4 letters are calculated on the fly
     /// </summary>   
-    public class SearchIndex
+    public class SearchIndexTrigramSet : AbstractSearchIndex
     {
-        int[] compressedTrigramCounts = new int[36 * 36 * 36];
+        int[] trigramCounts = new int[36 * 36 * 36];
 
         ISet<int>[] trigramArr = new LowMemorySet[36 * 36 * 36];
-        Dictionary<int, string> originalValues = new Dictionary<int, string>();
-
+      
         public void Add(int id, string value)
         {
             originalValues[id] = value;
 
             var words = value.Split(new char[] { }, StringSplitOptions.RemoveEmptyEntries);
 
-            var compressedTrigrams = new HashSet<ushort>();
+            var trigrams = new HashSet<Trigram>();
 
             foreach (var word in words)
             {
                 var normalizedWord = Utils.NormalizeString(word);
-                Utils.AddCompressedTrigrams(normalizedWord, compressedTrigrams);
+                Utils.AddTrigrams(normalizedWord, trigrams);
             }
 
-            foreach (var compressedTrigram in compressedTrigrams)
+            foreach (var t in trigrams)
             {
-                if (trigramArr[compressedTrigram] == null)
-                    trigramArr[compressedTrigram] = new LowMemorySet();
+                if (trigramArr[t.Ordinal] == null)
+                    trigramArr[t.Ordinal] = new LowMemorySet();
 
-                trigramArr[compressedTrigram].Add(id);
-                compressedTrigramCounts[compressedTrigram] = compressedTrigramCounts[compressedTrigram] + 1;
+                trigramArr[t.Ordinal].Add(id);
+                trigramCounts[t.Ordinal] = trigramCounts[t.Ordinal] + 1;
             }
 
-            foreach(var ct in compressedTrigrams)
+            foreach(var t in trigrams)
             {
-                compressedTrigramCounts[ct] = trigramArr[ct].Count;
+                trigramCounts[t.Ordinal] = trigramArr[t.Ordinal].Count;
             }
         }
 
-        public SearchResult Search(string searchTerm)
+        public override SearchResult Search(string searchTerm)
         {
             var startTime = DateTime.UtcNow;
             var words = searchTerm.Split(new char[] { }, StringSplitOptions.RemoveEmptyEntries);
-            var compressedTrigrams = new HashSet<ushort>();
+            var trigrams = new HashSet<Trigram>();
 
             foreach (var word in words)
             {
                 var normalizedWord = Utils.NormalizeString(word);
-                Utils.AddCompressedTrigrams(normalizedWord, compressedTrigrams);
+                Utils.AddTrigrams(normalizedWord, trigrams);
             }
 
-            if (compressedTrigrams.Any())
-                return SearchTrigrams(words, compressedTrigrams);
+            if (trigrams.Any())
+                return SearchTrigrams(words, trigrams);
 
-            return SearchScan(words);
+            else 
+                return Scan(searchTerm);
         }
 
-        private SearchResult SearchScan(string[] words)
-        {
-            var order = 0;
-            var searchResult = new SearchResult();
-
-            searchResult.SearchResultExactMatchItems = new List<SearchResultItem>();
-            searchResult.SearchResultAlternativeMatchItems = new List<SearchResultItem>();
-
-            foreach (var kv in originalValues)
-            {
-                var id = kv.Key;
-                var value = kv.Value;
-
-                var include = true;
-                foreach (var word in words)
-                {
-                    // TODO: implement Contains(string, StringComparison.IgnoreCase)
-                    //       which doesn't exist in .net standard 2.0
-                    if (!value.Contains(word.ToLower()))
-                    {
-                        include = false;
-                        break;
-                    }
-                }
-
-                if (include)
-                { 
-                    searchResult.SearchResultExactMatchItems.Add(new SearchResultItem
-                    {
-                        Order = order,
-                        Id = id,
-                        OriginalValue = value,
-                        Score = 100
-                    });
-
-                    order++;
-                }
-            }
-            return searchResult;
-        }
-
-        private SearchResult SearchTrigrams(string[] words, HashSet<ushort> compressedTrigrams)
+        private SearchResult SearchTrigrams(string[] words, HashSet<Trigram> compressedTrigrams)
         {
             var startTime = DateTime.UtcNow;
 
-            var searchTrigrams0 = ushort.MaxValue;
-            var searchTrigrams1 = ushort.MaxValue;
-            var searchTrigrams2 = ushort.MaxValue;
+            var t0 = Trigram.Invalid;
+            var t1 = Trigram.Invalid;
+            var t2 = Trigram.Invalid;
 
             foreach (var ct in compressedTrigrams)
             {
-                int trigramCount = compressedTrigramCounts[ct];
+                int trigramCount = trigramCounts[ct.Ordinal];
 
                 // if this trigram was not found in the index, ignore it.
                 if (trigramCount == 0)
                     continue;
 
-                else if (searchTrigrams0 == ushort.MaxValue)
-                    searchTrigrams0 = ct;
-                else if (searchTrigrams1 == ushort.MaxValue)
-                    searchTrigrams1 = ct;
-                else if (searchTrigrams2 == ushort.MaxValue)
-                    searchTrigrams2 = ct;
+                else if (t0.Ordinal == Trigram.Invalid.Ordinal)
+                    t0 = ct;
+                else if (t1.Ordinal == Trigram.Invalid.Ordinal)
+                    t1 = ct;
+                else if (t2.Ordinal == Trigram.Invalid.Ordinal)
+                    t2 = ct;
                 else
                 {
-                    if (trigramCount < compressedTrigramCounts[searchTrigrams0])
+                    if (trigramCount < trigramCounts[t0.Ordinal])
                     {
-                        searchTrigrams2 = searchTrigrams1;
-                        searchTrigrams1 = searchTrigrams0;
-                        searchTrigrams0 = ct;
+                        t2 = t1;
+                        t1 = t0;
+                        t0 = ct;
                     }
-                    else if (trigramCount < compressedTrigramCounts[searchTrigrams1])
+                    else if (trigramCount < trigramCounts[t1.Ordinal])
                     {
-                        searchTrigrams2 = searchTrigrams1;
-                        searchTrigrams1 = ct;
+                        t2 = t1;
+                        t1 = ct;
                     }
-                    else if (trigramCount < compressedTrigramCounts[searchTrigrams2])
+                    else if (trigramCount < trigramCounts[t2.Ordinal])
                     {
-                        searchTrigrams2 = ct;
+                        t2 = ct;
                     }
                 }
             }
@@ -157,16 +118,16 @@ namespace Wibblr.InstantSearch
             // now find all IDs that contain the 3 trigrams with the fewest matches (i.e. the most selective)
             Dictionary<int, int> idsWithMatchCount = new Dictionary<int, int>();
             
-            if (searchTrigrams0 != ushort.MaxValue)
+            if (t0.Ordinal != ushort.MaxValue)
             {
                 //ids = new HashSet<int>(trigramArr[searchTrigrams0]);
-                foreach (var id in trigramArr[searchTrigrams0])
+                foreach (var id in trigramArr[t0.Ordinal])
                     idsWithMatchCount[id] = 1;
 
-                if (searchTrigrams1 != ushort.MaxValue)
+                if (t1.Ordinal != ushort.MaxValue)
                 {
                     //ids.IntersectWith(trigramArr[searchTrigrams1]);
-                    foreach (var id in trigramArr[searchTrigrams1])
+                    foreach (var id in trigramArr[t1.Ordinal])
                     {
                         if (idsWithMatchCount.ContainsKey(id))
                             idsWithMatchCount[id] = 2;
@@ -174,9 +135,9 @@ namespace Wibblr.InstantSearch
                             idsWithMatchCount[id] = 1;
                     }
 
-                    if (searchTrigrams2 != ushort.MaxValue)
+                    if (t2.Ordinal != ushort.MaxValue)
                     {
-                        foreach (var id in trigramArr[searchTrigrams1])
+                        foreach (var id in trigramArr[t1.Ordinal])
                         {
                             if (idsWithMatchCount.ContainsKey(id))
                                 idsWithMatchCount[id] = idsWithMatchCount[id] + 1;
@@ -191,13 +152,13 @@ namespace Wibblr.InstantSearch
             var searchResultAlternativeMatchItems = new List<SearchResultItem>();
 
             var numberOfSearchTrigrams = 0;
-            if (searchTrigrams0 != ushort.MaxValue)
+            if (t0.Ordinal != ushort.MaxValue)
             {
                 numberOfSearchTrigrams += 1;
-                if (searchTrigrams1 != ushort.MaxValue)
+                if (t1.Ordinal != ushort.MaxValue)
                 {
                     numberOfSearchTrigrams += 1;
-                    if (searchTrigrams2 != ushort.MaxValue)
+                    if (t2.Ordinal != ushort.MaxValue)
                     {
                         numberOfSearchTrigrams += 1;
                     }
@@ -240,10 +201,10 @@ namespace Wibblr.InstantSearch
                 var count = 0;
                 foreach (var ct in compressedTrigrams)
                 {
-                    if (trigramArr[ct] == null)
+                    if (trigramArr[ct.Ordinal] == null)
                         continue;
 
-                    if (trigramArr[ct].Contains(searchResultItem.Id))
+                    if (trigramArr[ct.Ordinal].Contains(searchResultItem.Id))
                         count++;
                 }
                 searchResultItem.Score = (int)((float)count * 100 / compressedTrigrams.Count);
@@ -256,10 +217,10 @@ namespace Wibblr.InstantSearch
                 var count = 0;
                 foreach (var ct in compressedTrigrams)
                 {
-                    if (trigramArr[ct] == null)
+                    if (trigramArr[ct.Ordinal] == null)
                         continue;
 
-                    if (trigramArr[ct].Contains(searchResultItem.Id))
+                    if (trigramArr[ct.Ordinal].Contains(searchResultItem.Id))
                         count++;
                 }
                 searchResultItem.Score = (int)((float)count * 100 / compressedTrigrams.Count);

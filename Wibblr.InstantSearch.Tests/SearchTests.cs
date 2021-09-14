@@ -26,7 +26,7 @@ namespace Wibblr.InstantSearch.Tests
         [Fact]
         public void SearchTest()
         {
-            var e = new SearchIndex();
+            var e = new SearchIndexTrigramSet();
   
             e.Add(1, "a1sdfasdf qwert zzzzz");
             e.Add(3, "assdfa1sdf");

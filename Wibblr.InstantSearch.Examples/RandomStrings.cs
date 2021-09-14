@@ -6,7 +6,7 @@ namespace Wibblr.InstantSearch.Examples
 {
     class RandomStrings
     {
-        SearchIndex index = new SearchIndex();
+        SearchIndexTrigramSet index = new SearchIndexTrigramSet();
         Random random = new Random();
 
         private string RandomString(int len)
@@ -31,7 +31,7 @@ namespace Wibblr.InstantSearch.Examples
 
         void Run()
         {
-            int numStrings = 500_000;
+            int numStrings = 1_000_000;
             Console.WriteLine($"Adding {numStrings} strings");
             for (int i = 0; i < numStrings; i++)
             {
